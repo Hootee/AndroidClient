@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">itks545</string>
+    <string name="add_message">Add message</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="cancel">Cancel</string>
+    <string name="enable_GPS">Location provider is disabled in your device. Would you like to enable it?</string>
+    <string name="ok">OK</string>
+    <string name="send_button">Send message</string>
+    <string name="cancel_button">Cancel</string>
+<!--     <string name="server">http://192.168.100.41/itks545/index.php/</string> -->
+    <string name="server">http://itks545.it.jyu.fi/toarjusa/ITKS545-server/index.php/</string>
+    
+</resources>
