@@ -1,8 +1,12 @@
 package org.jyu.itks545;
 
-import org.jyu.itks545.R.string;
+import java.util.ArrayList;
+import java.util.List;
 
-import com.google.android.gms.maps.model.LatLng;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.message.BasicNameValuePair;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -10,6 +14,8 @@ import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+
+import com.google.android.gms.maps.model.LatLng;
 
 public class WriteMessageActivity extends FragmentActivity {
 	@SuppressWarnings("unused")
@@ -38,13 +44,15 @@ public class WriteMessageActivity extends FragmentActivity {
 		switch (buttonID) {
 		case R.id.buttonSend:
 			Log.i(TAG, "buttonSend");
-			EditText editText = (EditText) findViewById(R.id.editText1);
+			EditText editText = (EditText) findViewById(R.id.username_register);
 			String message = editText.getText().toString();
-			StringBuilder stringBuilder = new StringBuilder();
-			stringBuilder.append(getString(R.string.server)).append("messages/add/")
-			.append(location.longitude).append("/").append(location.latitude).append("/").append("100")
-			.append("/").append(message);
-			new GetJsonASync(null, stringBuilder.toString()).execute();
+			List<NameValuePair> data = new ArrayList<NameValuePair>(4);
+	        data.add(new BasicNameValuePair("userID", "1"));
+	        data.add(new BasicNameValuePair("latitude", Double.toString(location.latitude)));
+	        data.add(new BasicNameValuePair("longitude", Double.toString(location.longitude)));
+	        data.add(new BasicNameValuePair("message", message));
+
+	        new GetJsonASync(null, getString(R.string.server) + "messages/add/", data).execute();
 			Log.i(TAG, "" + location.latitude);
 			Intent intent1 = new Intent(this, MyMapActivity.class);
 			startActivity(intent1);

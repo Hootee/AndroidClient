@@ -85,6 +85,7 @@ public class MyMapActivity extends FragmentActivity {
 //		boolean gpsEnabled = mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 		boolean gpsEnabled = true;
 		boolean networkEnabled = mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+//		boolean networkEnabled = true;
 
 		// Check if enabled and if not send user to the GPS settings
 		if (!gpsEnabled || !networkEnabled) {
@@ -92,6 +93,7 @@ public class MyMapActivity extends FragmentActivity {
 		}
 		
 		mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 
+//		mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 
 				2 * 60 * 1000, 	// 2 minutes
 				10,				// 10 meters
 				listener);

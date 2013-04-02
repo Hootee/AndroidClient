@@ -4,30 +4,51 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.util.List;
 
 import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 
 import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
 import android.util.Log;
 
 class GetJsonASync extends AsyncTask<Void, Void, HttpResponse> {
+	private static final String TAG = GetJsonASync.class.getSimpleName();
+
 	private final AsyncCallback asyncCallback;
 	private final String url;
-
-	public GetJsonASync(AsyncCallback asyncCallback, String url) {
+	private final List<NameValuePair> data;
+	
+	public GetJsonASync(AsyncCallback asyncCallback, String url, List<NameValuePair> data) {
 		this.asyncCallback = asyncCallback;
 		this.url = url;
+		this.data = data;
 	}
 	@Override
 	protected HttpResponse doInBackground(Void... params) {
-		HttpGet request = new HttpGet(url);
-//		HttpPost request = new HttpPost(url);
+		HttpPost httpPost = new HttpPost(url);
 		AndroidHttpClient client = AndroidHttpClient.newInstance("Android");
+		StringEntity tmp = null;        
+
+//		httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded");
+
+        try {
+        	if (data != null) {
+        		tmp = new UrlEncodedFormEntity(data);
+        		httpPost.setEntity(tmp);
+        	}
+        } catch (UnsupportedEncodingException e) {
+        	Log.e(TAG, "HttpUtils : UnsupportedEncodingException : " + e);
+        }
+
+        
 		try {
-			return client.execute(request);
+			return client.execute(httpPost);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
@@ -53,6 +74,7 @@ class GetJsonASync extends AsyncTask<Void, Void, HttpResponse> {
 				reader.close();
 				is.close();
 
+				Log.i("Content", sb.toString());
 				if (asyncCallback != null) {
 					asyncCallback.callback(sb.toString());
 				}

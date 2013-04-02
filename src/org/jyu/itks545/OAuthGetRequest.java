@@ -26,7 +26,7 @@ import android.util.Log;
  */
 public class OAuthGetRequest {
 	@SuppressWarnings("unused")
-	private static final String TAG = MyMapFragment.class.getSimpleName();
+	private static final String TAG = OAuthGetRequest.class.getSimpleName();
 
     protected enum ParameterKey {
 
@@ -193,8 +193,9 @@ public class OAuthGetRequest {
         buildRequestUrl();
         Log.d(TAG, "Request URL: " + httpGet.getRequestLine().getUri());
         responseString = httpClient.execute(httpGet, responseHandler);
+        Log.d(TAG, "responseString: " + responseString);
         buildResponseMap();
-        Log.d(TAG, "oauth_token: " + responseMap.get("oauth_token"));
+        Log.d(TAG, "oauth_token: " + responseMap.get("oauth_token") + ", oauth_token_secret: " + responseMap.get("oauth_token_secret"));
 
     }
 

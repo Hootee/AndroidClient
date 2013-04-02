@@ -1,10 +1,38 @@
 package org.jyu.itks545;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.message.BasicNameValuePair;
+import org.jyu.itks545.MyOAuth.AccessToken;
+import org.jyu.itks545.MyOAuth.Authorize;
+import org.jyu.itks545.MyOAuth.RequestToken;
+
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
+import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,13 +52,11 @@ import android.widget.TextView;
  * well.
  */
 public class LoginActivity extends Activity {
-	/**
-	 * A dummy authentication store containing known user names and passwords.
-	 * TODO: remove after connecting to a real authentication system.
-	 */
-	private static final String[] DUMMY_CREDENTIALS = new String[] {
-			"foo@example.com:hello", "bar@example.com:world" };
-
+	
+	private RequestToken requestToken;
+	private Authorize authorizer;
+	private AccessToken accessToken;
+	
 	/**
 	 * The default email to populate the email field with.
 	 */
@@ -40,6 +66,10 @@ public class LoginActivity extends Activity {
 	 * Keep track of the login task to ensure we can cancel it if requested.
 	 */
 	private UserLoginTask mAuthTask = null;
+	
+	private int mUserID;
+	private String mAuthorizedAccessToken;
+	private String mUsername;
 
 	// Values for email and password at the time of the login attempt.
 	private String mEmail;
@@ -59,6 +89,16 @@ public class LoginActivity extends Activity {
 		setContentView(R.layout.activity_login);
 		setupActionBar();
 
+		// if we have userID and accessToken we are good to go.
+		SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+		mUserID = preferences.getInt("userID", 0);
+		mAuthorizedAccessToken = preferences.getString("authorizedAccessToken", null);
+		// consumerkey and consumersecret
+		
+		if (mAuthorizedAccessToken != null) {
+			login();
+		}
+		
 		// Set up the login form.
 		mEmail = getIntent().getStringExtra(EXTRA_EMAIL);
 		mEmailView = (EditText) findViewById(R.id.email);
@@ -87,6 +127,14 @@ public class LoginActivity extends Activity {
 					@Override
 					public void onClick(View view) {
 						attemptLogin();
+					}
+				});
+
+		findViewById(R.id.register_user_button).setOnClickListener(
+				new View.OnClickListener() {
+					@Override
+					public void onClick(View view) {
+						startRegistration();
 					}
 				});
 	}
@@ -128,6 +176,14 @@ public class LoginActivity extends Activity {
 		return true;
 	}
 
+	public void startRegistration() {
+//		String url = getString(R.string.server) + "register_user";
+		String url = "http://192.168.100.41/itks545/register_user";
+		Intent i = new Intent(Intent.ACTION_VIEW);
+		i.setData(Uri.parse(url));
+		startActivity(i);
+	}
+	
 	/**
 	 * Attempts to sign in or register the account specified by the login form.
 	 * If there are form errors (invalid email, missing fields, etc.), the
@@ -185,7 +241,7 @@ public class LoginActivity extends Activity {
 		}
 	}
 
-	protected void loginSuccessfull() {
+	protected void login() {
 		Intent intent = new Intent(this, MyMapActivity.class);
 		startActivity(intent);
 	}
@@ -234,37 +290,75 @@ public class LoginActivity extends Activity {
 	 * Represents an asynchronous login/registration task used to authenticate
 	 * the user.
 	 */
-	public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
+	public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {	
+		
 		@Override
 		protected Boolean doInBackground(Void... params) {
-			// TODO: attempt authentication against a network service.
 
+			requestToken = new RequestToken(mConsumerKey, mConsumerSecret);
 			try {
-				// Simulate network access.
-				Thread.sleep(2000);
-			} catch (InterruptedException e) {
-				return false;
+				requestToken.sendRequest();
+			} catch (Exception e) {
+				// TODO Automaattisesti luotu catch-lohko
+				e.printStackTrace();
 			}
-
-			for (String credential : DUMMY_CREDENTIALS) {
-				String[] pieces = credential.split(":");
-				if (pieces[0].equals(mEmail)) {
-					// Account exists, return true if the password matches.
-					return pieces[1].equals(mPassword);
-				}
-			}
-
-			// TODO: register the new account here.
+			authorizer = new Authorize(requestToken);
+			
+//			try {
+//				String authorization_uri = authorizer.getURI().toString();
+//				Log.d("UserLoginTask", "auth_url:" + authorization_uri);
+//				Intent i = new Intent(Intent.ACTION_VIEW);
+//				i.setData(Uri.parse(authorization_uri));
+//				startActivity(i);
+//								
+//				
+//			} catch (URISyntaxException e) {
+//				// TODO Automaattisesti luotu catch-lohko
+//				e.printStackTrace();
+//			}
+			
+			authorizeUser(authorizer.getURI());
+			
 			return true;
 		}
 
+		private boolean authorizeUser(URI uri) {
+			AndroidHttpClient client = AndroidHttpClient.newInstance("Android");
+			HttpGet get = new HttpGet(uri);
+
+			try {
+				HttpResponse result = client.execute(get);
+				InputStream is = result.getEntity().getContent();
+				BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+				StringBuilder sb = new StringBuilder();
+				String line = null;
+
+				while ((line = reader.readLine()) != null) {
+					sb.append(line);
+				}
+				Log.i("UserLoginTask", "response: " +sb.toString());
+
+				reader.close();
+				is.close();
+			} catch (IllegalStateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} finally {
+				client.close();
+			}
+			return true;
+		}
+		
 		@Override
 		protected void onPostExecute(final Boolean success) {
 			mAuthTask = null;
 			showProgress(false);
 
 			if (success) {
-				loginSuccessfull();
+				login();
 				Log.i("LoginActivity", "success");
 				finish();
 			} else {

@@ -48,11 +48,21 @@
             android:windowSoftInputMode="adjustResize|stateVisible" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="android.support.v4.app.FragmentActivity" />
+        </activity>
+        <activity
+            android:name="org.jyu.itks545.RegisterActivity"
+            android:label="@string/title_activity_register"
+            android:parentActivityName="org.jyu.itks545.LoginActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="org.jyu.itks545.LoginActivity" />
         </activity>
     </application>
 
