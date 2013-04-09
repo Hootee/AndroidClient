@@ -6,6 +6,7 @@ import java.net.URLEncoder;
 import org.jyu.itks545.MyOAuth.AddMessage;
 
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.view.View;
@@ -39,6 +40,23 @@ public class WriteMessageActivity extends FragmentActivity {
 		int buttonID = v.getId();
 		switch (buttonID) {
 		case R.id.buttonSend:
+			new AddMessageASync().execute((Void) null);
+			break;
+
+		case R.id.buttonCancel:
+			break;
+
+		default:
+			break;
+		}	
+		Intent intent1 = new Intent(this, MyMapActivity.class);
+		startActivity(intent1);
+	}
+	
+	private class AddMessageASync extends AsyncTask<Void, Void, Void> {
+
+		@Override
+		protected Void doInBackground(Void... params) {
 			EditText editText = (EditText) findViewById(R.id.editTextMessage);
 			try {
 				String message = URLEncoder.encode(editText.getText().toString(), "UTF-8");
@@ -58,15 +76,8 @@ public class WriteMessageActivity extends FragmentActivity {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			break;
-
-		case R.id.buttonCancel:
-			break;
-
-		default:
-			break;
-		}	
-		Intent intent1 = new Intent(this, MyMapActivity.class);
-		startActivity(intent1);
+			return null;
+		}
+		
 	}
 }
