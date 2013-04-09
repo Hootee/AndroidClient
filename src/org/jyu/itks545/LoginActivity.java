@@ -21,10 +21,14 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.message.BasicNameValuePair;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.jyu.itks545.MyOAuth.AccessToken;
 import org.jyu.itks545.MyOAuth.Authorize;
 import org.jyu.itks545.MyOAuth.RequestToken;
 
+import android.R.bool;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
@@ -53,6 +57,12 @@ import android.widget.TextView;
  */
 public class LoginActivity extends Activity {
 	
+	public static String USERID = "userid";
+	public static String CONSUMERKEY = "consumerkey";
+	public static String CONSUMERSECRET = "consumersecret";
+	public static String AUTHORIZEDACCESSTOKEN = "authorizedaccesstoken";
+	public static String AUTHORIZEDACCESSTOKENSECRET = "authorizedaccesstokensecret";
+	
 	private RequestToken requestToken;
 	private Authorize authorizer;
 	private AccessToken accessToken;
@@ -61,21 +71,27 @@ public class LoginActivity extends Activity {
 	 * The default email to populate the email field with.
 	 */
 	public static final String EXTRA_EMAIL = "com.example.android.authenticatordemo.extra.EMAIL";
+	public static final String EXTRA_USERNAME = "";
 
 	/**
 	 * Keep track of the login task to ensure we can cancel it if requested.
 	 */
-	private UserLoginTask mAuthTask = null;
+	private UserLoginTask mLoginTask = null;
+	private UserAuthorizationTask mAuthTask = null;
 	
 	private int mUserID;
 	private String mAuthorizedAccessToken;
-	private String mUsername;
+	private String mAuthorizedAccessTokenSecret;
+	private String mConsumerKey;
+	private String mConsumerSecret;
 
 	// Values for email and password at the time of the login attempt.
+	private String mUsername;
 	private String mEmail;
 	private String mPassword;
 
 	// UI references.
+	private EditText mUsernameView;
 	private EditText mEmailView;
 	private EditText mPasswordView;
 	private View mLoginFormView;
@@ -93,13 +109,18 @@ public class LoginActivity extends Activity {
 		SharedPreferences preferences = getPreferences(MODE_PRIVATE);
 		mUserID = preferences.getInt("userID", 0);
 		mAuthorizedAccessToken = preferences.getString("authorizedAccessToken", null);
-		// consumerkey and consumersecret
+		mConsumerKey = preferences.getString("consumerKey", null);
+		mConsumerSecret = preferences.getString("consumerSecret", null);
 		
 		if (mAuthorizedAccessToken != null) {
-			login();
+			finish();
 		}
 		
 		// Set up the login form.
+		mUsername = getIntent().getStringExtra(EXTRA_USERNAME);
+		mUsernameView = (EditText) findViewById(R.id.username);
+		mUsernameView.setText(mUsername);
+
 		mEmail = getIntent().getStringExtra(EXTRA_EMAIL);
 		mEmailView = (EditText) findViewById(R.id.email);
 		mEmailView.setText(mEmail);
@@ -190,15 +211,17 @@ public class LoginActivity extends Activity {
 	 * errors are presented and no actual login attempt is made.
 	 */
 	public void attemptLogin() {
-		if (mAuthTask != null) {
+		if (mLoginTask != null) {
 			return;
 		}
 
 		// Reset errors.
+		mUsernameView.setError(null);
 		mEmailView.setError(null);
 		mPasswordView.setError(null);
 
 		// Store values at the time of the login attempt.
+		mUsername = mUsernameView.getText().toString();
 		mEmail = mEmailView.getText().toString();
 		mPassword = mPasswordView.getText().toString();
 
@@ -227,6 +250,17 @@ public class LoginActivity extends Activity {
 			cancel = true;
 		}
 
+		// Check for a valid username.
+		if (TextUtils.isEmpty(mUsername)) {
+			mUsernameView.setError(getString(R.string.error_field_required));
+			focusView = mUsernameView;
+			cancel = true;
+		} else if (mUsername.contains("@")) {
+			mUsernameView.setError(getString(R.string.error_invalid_username));
+			focusView = mUsernameView;
+			cancel = true;
+		}
+
 		if (cancel) {
 			// There was an error; don't attempt login and focus the first
 			// form field with an error.
@@ -236,14 +270,21 @@ public class LoginActivity extends Activity {
 			// perform the user login attempt.
 			mLoginStatusMessageView.setText(R.string.login_progress_signing_in);
 			showProgress(true);
-			mAuthTask = new UserLoginTask();
-			mAuthTask.execute((Void) null);
+			mLoginTask = new UserLoginTask();
+			mLoginTask.execute((Void) null);
 		}
 	}
 
-	protected void login() {
-		Intent intent = new Intent(this, MyMapActivity.class);
-		startActivity(intent);
+	@Override
+	public void finish() {
+		Intent data = new Intent();
+		data.putExtra(LoginActivity.USERID, mUserID);
+		data.putExtra(LoginActivity.CONSUMERKEY, mConsumerKey);
+		data.putExtra(LoginActivity.CONSUMERSECRET, mConsumerSecret);
+		data.putExtra(LoginActivity.AUTHORIZEDACCESSTOKEN, mAuthorizedAccessToken);
+		data.putExtra(LoginActivity.AUTHORIZEDACCESSTOKENSECRET, mAuthorizedAccessTokenSecret);
+		setResult(RESULT_OK, data);
+		super.finish();
 	}
 	/**
 	 * Shows the progress UI and hides the login form.
@@ -287,14 +328,144 @@ public class LoginActivity extends Activity {
 	}
 
 	/**
+	 * Represents an asynchronous login task used to authenticate
+	 * the user in application.
+	 */
+	public class UserLoginTask extends AsyncTask<Void, Void, HttpResponse> {	
+		
+		@Override
+		protected HttpResponse doInBackground(Void... params) {
+
+			Log.i("UserLoginTask", "mUsername: " + mUsername + ", mPassword: " + mPassword);
+						
+			List<NameValuePair> data = new ArrayList<NameValuePair>(2);
+	        data.add(new BasicNameValuePair("users_name", mUsername));
+	        data.add(new BasicNameValuePair("users_password", mPassword));
+	        
+			return loginUser(getString(R.string.server) + getString(R.string.login), data);
+		}
+
+		private HttpResponse loginUser(String url, List<NameValuePair> data) {
+			AndroidHttpClient client = AndroidHttpClient.newInstance("Android");
+			HttpPost httpPost = new HttpPost(url);
+			StringEntity entity = null;
+			
+			try {
+	        	if (data != null) {
+	        		entity = new UrlEncodedFormEntity(data);
+	        		httpPost.setEntity(entity);
+	        	}
+	        } catch (UnsupportedEncodingException e) {
+	        	Log.e("UserLoginTask", "HttpUtils : UnsupportedEncodingException : " + e);
+	        }
+			
+			try {
+				return client.execute(httpPost);
+			} catch (IOException e) {
+				e.printStackTrace();
+				return null;
+			} finally {
+				client.close();
+			}
+		}
+		
+
+		/**
+		 * Parse login json output to variables.
+		 * @param json
+		 * @return
+		 */
+		private boolean parseLoginOutput(String json) {
+			Log.i("UserLoginTask", json);
+			try {
+				JSONObject o = new JSONObject(json);
+				mUserID = o.getInt("user_id");
+				mConsumerKey = o.getString("consumer_key");
+				mConsumerSecret = o.getString("consumer_secret");
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			}
+			return true;
+		}
+	    
+		/**
+	     * Parse string from httpResponse.
+	     * @param result
+	     * @return
+	     */
+	    private String buildResponseString(HttpResponse result) {
+			StringBuilder sb = new StringBuilder();
+			String line = null;
+
+			try {
+				InputStream inputStream = result.getEntity().getContent();
+				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+				while ((line = reader.readLine()) != null) {
+					sb.append(line);
+				}
+
+				reader.close();
+				inputStream.close();
+			
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+
+	    	return sb.toString();
+	    }
+	    
+		@Override
+		protected void onPostExecute(HttpResponse result) {
+			mLoginTask = null;
+			showProgress(false);
+			boolean success = false;
+			
+			String responseString= null;
+			try {
+				responseString = buildResponseString(result);
+				Log.i("UserLoginTask", "responseString: " + responseString);
+			} catch (IllegalStateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			success = parseLoginOutput(responseString);
+					
+			
+			if (success) {
+				Log.i("UserLoginTask", "success");
+				mAuthTask = new UserAuthorizationTask();
+				mAuthTask.execute((Void) null);
+			} else {
+				Log.i("UserLoginTask", "failure");
+				mPasswordView
+						.setError(getString(R.string.error_incorrect_password));
+				mPasswordView.requestFocus();
+			}
+		}
+
+		@Override
+		protected void onCancelled() {
+			mLoginTask = null;
+			showProgress(false);
+		}
+	}
+
+	/**
 	 * Represents an asynchronous login/registration task used to authenticate
 	 * the user.
 	 */
-	public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {	
+	public class UserAuthorizationTask extends AsyncTask<Void, Void, Boolean> {	
 		
 		@Override
 		protected Boolean doInBackground(Void... params) {
 
+			Log.i("UserAuthorizationTask", "mUserID: " + mUserID + ", mConsumerKey: " + mConsumerKey + ", mConsumerSecret: " + mConsumerSecret);
+			
 			requestToken = new RequestToken(mConsumerKey, mConsumerSecret);
 			try {
 				requestToken.sendRequest();
@@ -302,67 +473,126 @@ public class LoginActivity extends Activity {
 				// TODO Automaattisesti luotu catch-lohko
 				e.printStackTrace();
 			}
-			authorizer = new Authorize(requestToken);
 			
-//			try {
-//				String authorization_uri = authorizer.getURI().toString();
-//				Log.d("UserLoginTask", "auth_url:" + authorization_uri);
-//				Intent i = new Intent(Intent.ACTION_VIEW);
-//				i.setData(Uri.parse(authorization_uri));
-//				startActivity(i);
-//								
-//				
-//			} catch (URISyntaxException e) {
-//				// TODO Automaattisesti luotu catch-lohko
-//				e.printStackTrace();
-//			}
+			authorizer = new Authorize(mConsumerKey, mConsumerSecret, requestToken);
 			
-			authorizeUser(authorizer.getURI());
+			List<NameValuePair> data = new ArrayList<NameValuePair>(4);
+	        data.add(new BasicNameValuePair("user_id", Integer.toString(mUserID)));
+	        data.add(new BasicNameValuePair(LoginActivity.CONSUMERKEY, mConsumerKey));
+	        data.add(new BasicNameValuePair(LoginActivity.CONSUMERSECRET, mConsumerSecret));
+	        data.add(new BasicNameValuePair("oauth_token", requestToken.getResponseString("oauth_token")));
+	        
+			HttpResponse result = authorizeUser(authorizer.getAuthorizationURL(), data);
 			
-			return true;
-		}
-
-		private boolean authorizeUser(URI uri) {
-			AndroidHttpClient client = AndroidHttpClient.newInstance("Android");
-			HttpGet get = new HttpGet(uri);
-
+			String responseString= null;
+			
 			try {
-				HttpResponse result = client.execute(get);
-				InputStream is = result.getEntity().getContent();
-				BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-				StringBuilder sb = new StringBuilder();
-				String line = null;
-
-				while ((line = reader.readLine()) != null) {
-					sb.append(line);
-				}
-				Log.i("UserLoginTask", "response: " +sb.toString());
-
-				reader.close();
-				is.close();
+				responseString = buildResponseString(result);
+				Log.i("UserAuthorizationTask", "responseString: " + responseString);
 			} catch (IllegalStateException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+			}
+			
+			String pin = parsePinJsonOutput(responseString);
+			boolean success = false;
+			
+			if (pin != null) {
+				accessToken = new AccessToken(mConsumerKey, mConsumerSecret, pin, requestToken);
+				try {
+					accessToken.sendRequest();
+					mAuthorizedAccessToken = accessToken.getResponseString("oauth_token");
+					mAuthorizedAccessTokenSecret = accessToken.getResponseString("oauth_token_secret");
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				success = true;
+			}
+			return success;
+		}
+
+		private HttpResponse authorizeUser(String url, List<NameValuePair> data) {
+			AndroidHttpClient client = AndroidHttpClient.newInstance("Android");
+			HttpPost httpPost = new HttpPost(url);
+			StringEntity entity = null;
+			
+			try {
+	        	if (data != null) {
+	        		entity = new UrlEncodedFormEntity(data);
+	        		httpPost.setEntity(entity);
+	        	}
+	        } catch (UnsupportedEncodingException e) {
+	        	Log.e("UserAuthorizationTask", "UnsupportedEncodingException : " + e);
+	        }
+			
+			try {
+				return client.execute(httpPost);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
+				return null;
 			} finally {
 				client.close();
 			}
-			return true;
 		}
 		
+		/**
+		 * Parse login json output to variables.
+		 * @param json
+		 * @return
+		 */
+		private String parsePinJsonOutput(String json) {
+			Log.i("UserAuthorizationTask", json);
+			String pin = null;
+			try {
+				JSONObject o = new JSONObject(json);
+				pin = o.getString("pin");
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			return pin;
+		}
+	    
+		/**
+	     * Parse string from httpResponse.
+	     * @param result
+	     * @return
+	     */
+	    private String buildResponseString(HttpResponse result) {
+			StringBuilder responseString = new StringBuilder();
+			String line = null;
+
+			try {
+				InputStream inputStream = result.getEntity().getContent();
+				InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+				BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+				while ((line = bufferedReader.readLine()) != null) {
+					responseString.append(line);
+				}
+
+				bufferedReader.close();
+				inputStream.close();
+				inputStreamReader.close();
+			
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+
+	    	return responseString.toString();
+	    }	    
 		@Override
-		protected void onPostExecute(final Boolean success) {
+		protected void onPostExecute(Boolean success) {
 			mAuthTask = null;
 			showProgress(false);
-
+						
 			if (success) {
-				login();
-				Log.i("LoginActivity", "success");
+				Log.i("UserAuthorizationTask", "success");
 				finish();
 			} else {
-				Log.i("LoginActivity", "failure");
+				Log.i("UserAuthorizationTask", "failure");
 				mPasswordView
 						.setError(getString(R.string.error_incorrect_password));
 				mPasswordView.requestFocus();

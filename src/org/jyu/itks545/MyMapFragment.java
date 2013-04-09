@@ -65,7 +65,7 @@ public class MyMapFragment extends SupportMapFragment implements AsyncCallback, 
 	}
 	
 	private void getAllMarkers() {
-		new GetJsonASync(this, getString(R.string.server) + "messages/getall", null).execute();
+		new GetJsonASync(this, getString(R.string.server) + "/messages/getall", null).execute();
 	}
 
 	/*

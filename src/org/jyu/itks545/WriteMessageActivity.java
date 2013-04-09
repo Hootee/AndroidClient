@@ -1,70 +1,72 @@
 package org.jyu.itks545;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicNameValuePair;
+import org.jyu.itks545.MyOAuth.AddMessage;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
-
-import com.google.android.gms.maps.model.LatLng;
 
 public class WriteMessageActivity extends FragmentActivity {
 	@SuppressWarnings("unused")
 	private static final String TAG = WriteMessageActivity.class.getSimpleName();
 
-	private LatLng location;
+	private Double latitude, longitude;
+	private int userID;
+	private String consumerKey, consumerSecret, accessToken, accessTokenSecret;
 	
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		this.setContentView(R.layout.activity_writemessage);
 		
-		// Restore apps state (if exists) after rotation.
 		Bundle extras = getIntent().getExtras();
         if (extras != null) {
-            Double latitude = extras.getDouble("latitude");
-            Double longitude = extras.getDouble("longitude");
-            if (latitude != 0 || longitude != 0) {
-            	location = new LatLng(latitude, longitude);
-            }
-        } else {
+            latitude = extras.getDouble("latitude");
+            longitude = extras.getDouble("longitude");
+            userID = extras.getInt("userID");
+            consumerKey = extras.getString("consumerKey");
+            consumerSecret = extras.getString("consumerSecret");
+            accessToken = extras.getString("accessToken");
+            accessTokenSecret = extras.getString("accessTokenSecret");
         }
-	}
+ 	}
 	
 	public void onClick(View v) {
 		int buttonID = v.getId();
 		switch (buttonID) {
 		case R.id.buttonSend:
-			Log.i(TAG, "buttonSend");
-			EditText editText = (EditText) findViewById(R.id.username_register);
-			String message = editText.getText().toString();
-			List<NameValuePair> data = new ArrayList<NameValuePair>(4);
-	        data.add(new BasicNameValuePair("userID", "1"));
-	        data.add(new BasicNameValuePair("latitude", Double.toString(location.latitude)));
-	        data.add(new BasicNameValuePair("longitude", Double.toString(location.longitude)));
-	        data.add(new BasicNameValuePair("message", message));
+			EditText editText = (EditText) findViewById(R.id.editTextMessage);
+			try {
+				String message = URLEncoder.encode(editText.getText().toString(), "UTF-8");
+				AddMessage addMessage = new AddMessage(
+						userID, 
+						latitude, 
+						longitude, 
+						message, 
+						consumerKey, 
+						consumerSecret, 
+						accessToken, 
+						accessTokenSecret);
 
-	        new GetJsonASync(null, getString(R.string.server) + "messages/add/", data).execute();
-			Log.i(TAG, "" + location.latitude);
-			Intent intent1 = new Intent(this, MyMapActivity.class);
-			startActivity(intent1);
+				addMessage.sendRequest();
+			} catch (UnsupportedEncodingException e1) {
+				e1.printStackTrace();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 			break;
+
 		case R.id.buttonCancel:
-			Log.i(TAG, "buttonCancel");
-			Intent intent2 = new Intent(this, MyMapActivity.class);
-			startActivity(intent2);
 			break;
 
 		default:
 			break;
 		}	
+		Intent intent1 = new Intent(this, MyMapActivity.class);
+		startActivity(intent1);
 	}
 }

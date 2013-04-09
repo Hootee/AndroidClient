@@ -31,6 +31,7 @@ class GetJsonASync extends AsyncTask<Void, Void, HttpResponse> {
 	}
 	@Override
 	protected HttpResponse doInBackground(Void... params) {
+		Log.i(TAG, url);
 		HttpPost httpPost = new HttpPost(url);
 		AndroidHttpClient client = AndroidHttpClient.newInstance("Android");
 		StringEntity tmp = null;        

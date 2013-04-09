@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -23,7 +24,17 @@ import com.google.android.gms.maps.model.LatLng;
 
 public class MyMapActivity extends FragmentActivity {
 	private static final String TAG = MyMapActivity.class.getSimpleName();
-
+	
+	private static final int LOGIN_REQUEST_CODE = 1234;
+	
+	
+	private int mUserID;
+	private String mAuthorizedAccessToken;
+	private String mAuthorizedAccessTokenSecret;
+	private String mUsername;
+	private String mConsumerKey;
+	private String mConsumerSecret;
+	
 	private static final int UPDATE_LATLNG = 2;
 
 	private LatLng location;
@@ -80,6 +91,13 @@ public class MyMapActivity extends FragmentActivity {
         } else {
         }
         
+        // if we have userID and accessToken we are good to go.
+        SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+        mUserID = preferences.getInt("userID", 0);
+        mAuthorizedAccessToken = preferences.getString("authorizedAccessToken", null);
+        mConsumerKey = preferences.getString("consumerKey", null);
+        mConsumerSecret = preferences.getString("consumerSecret", null);
+
 		// Check if location services are enabled. Nothing to do with LocationService.
 		mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 //		boolean gpsEnabled = mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
@@ -135,11 +153,21 @@ public class MyMapActivity extends FragmentActivity {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
 		case id.action_add_message:
-//			addMessage();
-			Intent intent = new Intent(this, WriteMessageActivity.class);
-			intent.putExtra("latitude", location.latitude);
-			intent.putExtra("longitude", location.longitude);
-			startActivity(intent);
+			if(mUserID != 0 && mAuthorizedAccessToken != null && mConsumerKey != null && mConsumerSecret != null) {
+				Intent intent = new Intent(this, WriteMessageActivity.class);
+				intent.putExtra("latitude", location.latitude);
+				intent.putExtra("longitude", location.longitude);
+				intent.putExtra("userID", mUserID);
+				intent.putExtra("consumerKey", mConsumerKey);
+				intent.putExtra("consumerSecret", mConsumerSecret);
+				intent.putExtra("accessToken", mAuthorizedAccessToken);
+				intent.putExtra("accessTokenSecret", mAuthorizedAccessTokenSecret);
+
+				startActivity(intent);
+			} else {
+				Intent intent = new Intent(this, LoginActivity.class);
+				startActivityForResult(intent, LOGIN_REQUEST_CODE);				
+			}
 			break;
 
 		default:
@@ -148,6 +176,19 @@ public class MyMapActivity extends FragmentActivity {
 		return true;
 	}
 
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+	  if (resultCode == RESULT_OK && requestCode == LOGIN_REQUEST_CODE) {
+		  Bundle returnedData = data.getExtras();
+		  mUserID = returnedData.getInt(LoginActivity.USERID);
+		  mConsumerKey = returnedData.getString(LoginActivity.CONSUMERKEY);
+		  mConsumerSecret = returnedData.getString(LoginActivity.CONSUMERSECRET);
+		  mAuthorizedAccessToken = returnedData.getString(LoginActivity.AUTHORIZEDACCESSTOKEN);
+		  mAuthorizedAccessTokenSecret = returnedData.getString(LoginActivity.AUTHORIZEDACCESSTOKENSECRET);
+		  Log.d(TAG, "UserID: " + mUserID + ", ConsumerKey: " + mConsumerKey + ", ConsumerSecret: " + mConsumerSecret + ", mAuthorizedAccessToken: " + mAuthorizedAccessToken + ", mAuthorizedAccessTokenSecret: " + mAuthorizedAccessTokenSecret);
+	  }
+	}
+	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
@@ -201,12 +242,4 @@ public class MyMapActivity extends FragmentActivity {
 		alert.show();
 	}
 	
-//	private void addMessage() {
-//		Log.i(TAG, "addMessage");
-//		WriteMessageFrag writeMessageFrag = new WriteMessageFrag();
-//		FragmentManager fragmentManager = getSupportFragmentManager();
-//		FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-//		fragmentTransaction.replace(R.id.fragment_container, writeMessageFrag, "WriteMessageFrag");
-//		fragmentTransaction.commit();		
-//	}
 }
