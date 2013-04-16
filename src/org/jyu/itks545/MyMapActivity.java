@@ -31,33 +31,32 @@ public class MyMapActivity extends FragmentActivity {
 	private int mUserID;
 	private String mAuthorizedAccessToken;
 	private String mAuthorizedAccessTokenSecret;
-	private String mUsername;
+//	private String mUsername;
 	private String mConsumerKey;
 	private String mConsumerSecret;
 	
 	private static final int UPDATE_LATLNG = 2;
 
+	// Current location.
 	private LatLng location;
 	
+	// Message handler.
     private Handler mHandler;
 
 	private final LocationListener listener = new LocationListener() {
 		
 		@Override
 		public void onStatusChanged(String provider, int status, Bundle extras) {
-			// TODO Auto-generated method stub
 			
 		}
 		
 		@Override
 		public void onProviderEnabled(String provider) {
-			// TODO Auto-generated method stub
 			
 		}
 		
 		@Override
 		public void onProviderDisabled(String provider) {
-			// TODO Auto-generated method stub
 			
 		}
 		
@@ -95,11 +94,14 @@ public class MyMapActivity extends FragmentActivity {
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
         mUserID = preferences.getInt("userID", 0);
         mAuthorizedAccessToken = preferences.getString("authorizedAccessToken", null);
+        mAuthorizedAccessTokenSecret = preferences.getString("authorizedAccessTokenSecret", null);
         mConsumerKey = preferences.getString("consumerKey", null);
         mConsumerSecret = preferences.getString("consumerSecret", null);
 
 		// Check if location services are enabled. Nothing to do with LocationService.
 		mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+		
+		// We are using only network-based location.
 //		boolean gpsEnabled = mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 		boolean gpsEnabled = true;
 		boolean networkEnabled = mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
@@ -107,7 +109,7 @@ public class MyMapActivity extends FragmentActivity {
 
 		// Check if enabled and if not send user to the GPS settings
 		if (!gpsEnabled || !networkEnabled) {
-			showGPSDisabledAlertToUser();
+			showLocationDisabledAlertToUser();
 		}
 		
 		mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 
@@ -120,6 +122,7 @@ public class MyMapActivity extends FragmentActivity {
             public void handleMessage(Message msg) {
                 switch (msg.what) {
                     case UPDATE_LATLNG:
+                    	// When first location is received, we move the camera to that location.
                     	boolean firstFix = false;
                     	if (location == null) {
                     		firstFix = true;
@@ -137,6 +140,9 @@ public class MyMapActivity extends FragmentActivity {
         createMap();
 	}
 	
+	/*
+	 * We create a map if there is no map already.
+	 */
 	public void createMap() {
 		FragmentManager fragmentManager = getSupportFragmentManager();
 		if (fragmentManager.findFragmentByTag("MapFrag") == null) {
@@ -176,9 +182,11 @@ public class MyMapActivity extends FragmentActivity {
 		return true;
 	}
 
+	
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-	  if (resultCode == RESULT_OK && requestCode == LOGIN_REQUEST_CODE) {
+		// Get the results from the login intent and put them to shared preferences.
+		if (resultCode == RESULT_OK && requestCode == LOGIN_REQUEST_CODE) {
 		  Bundle returnedData = data.getExtras();
 		  mUserID = returnedData.getInt(LoginActivity.USERID);
 		  mConsumerKey = returnedData.getString(LoginActivity.CONSUMERKEY);
@@ -186,7 +194,18 @@ public class MyMapActivity extends FragmentActivity {
 		  mAuthorizedAccessToken = returnedData.getString(LoginActivity.AUTHORIZEDACCESSTOKEN);
 		  mAuthorizedAccessTokenSecret = returnedData.getString(LoginActivity.AUTHORIZEDACCESSTOKENSECRET);
 		  Log.d(TAG, "UserID: " + mUserID + ", ConsumerKey: " + mConsumerKey + ", ConsumerSecret: " + mConsumerSecret + ", mAuthorizedAccessToken: " + mAuthorizedAccessToken + ", mAuthorizedAccessTokenSecret: " + mAuthorizedAccessTokenSecret);
+		  SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+		  SharedPreferences.Editor editor = preferences.edit();
+		  editor.putInt("userID", mUserID);
+		  editor.putString("consumerKey", mConsumerKey);
+		  editor.putString("consumerSecret", mConsumerSecret);
+		  editor.putString("authorizedAccessToken", mAuthorizedAccessToken);
+		  editor.putString("authorizedAccessTokenSecret", mAuthorizedAccessTokenSecret);
+		  editor.commit();
 	  }
+	  
+	  
+	  
 	}
 	
 	@Override
@@ -216,10 +235,12 @@ public class MyMapActivity extends FragmentActivity {
 	}
 
 	/*
+	 * Show location settings.
+	 * 
 	 * http://stackoverflow.com/questions/843675/how-do-i-find-out-if-the-gps-of-
 	 * an-android-device-is-enabled
 	 */
-	private void showGPSDisabledAlertToUser() {
+	private void showLocationDisabledAlertToUser() {
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
 		alertDialogBuilder
 				.setMessage(R.string.enable_GPS)

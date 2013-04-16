@@ -20,7 +20,6 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MyMapFragment extends SupportMapFragment implements AsyncCallback, OnMarkerClickListener {
-	@SuppressWarnings("unused")
 	private static final String TAG = MyMapFragment.class.getSimpleName();
 	
 	/**
@@ -59,18 +58,24 @@ public class MyMapFragment extends SupportMapFragment implements AsyncCallback, 
 	}
 
 
+	/*
+	 * Set camera position on the map.
+	 */
 	public void setPosition(LatLng latLng) {
 		mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
 		mMap.moveCamera(CameraUpdateFactory.zoomTo(16));
 	}
 	
+	/*
+	 * Get all the markers.
+	 */
 	private void getAllMarkers() {
-		new GetJsonASync(this, getString(R.string.server) + "/messages/getall", null).execute();
+		new GetJsonASync(this, getString(R.string.server) + getString(R.string.getallmessages), null).execute();
 	}
 
 	/*
 	 * Show markers on map.
-	 * Its called from GetAllMarkersASync() as a callback.
+	 * Its called from GetJsonASync() as a callback when acquiring the markers.
 	 */
 	private void showMarkers(String json) {
 		Log.i(TAG, json);
@@ -88,6 +93,9 @@ public class MyMapFragment extends SupportMapFragment implements AsyncCallback, 
 		}
 	}
 
+	/*
+	 * Parse json and put marker on the map.
+	 */
 	private MarkerOptions createMarker(JSONObject o) throws JSONException {
 		int userID = o.getInt("userID");
 		double longitude = o.getDouble("longitude");

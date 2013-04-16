@@ -49,10 +49,17 @@ public class WriteMessageActivity extends FragmentActivity {
 		default:
 			break;
 		}	
+		
+		// We go back to Map in every case.
 		Intent intent1 = new Intent(this, MyMapActivity.class);
 		startActivity(intent1);
 	}
 	
+	/**
+	 * This sends message to the server on the background.
+	 * @author tonsal
+	 *
+	 */
 	private class AddMessageASync extends AsyncTask<Void, Void, Void> {
 
 		@Override

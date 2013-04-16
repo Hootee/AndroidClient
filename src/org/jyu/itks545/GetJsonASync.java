@@ -17,6 +17,10 @@ import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
 import android.util.Log;
 
+/**
+ * Get the response string from the server.
+ *
+ */
 class GetJsonASync extends AsyncTask<Void, Void, HttpResponse> {
 	private static final String TAG = GetJsonASync.class.getSimpleName();
 
@@ -76,14 +80,13 @@ class GetJsonASync extends AsyncTask<Void, Void, HttpResponse> {
 				is.close();
 
 				Log.i("Content", sb.toString());
+				
 				if (asyncCallback != null) {
 					asyncCallback.callback(sb.toString());
 				}
 			} catch (IllegalStateException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

@@ -5,30 +5,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
-import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.message.BasicNameValuePair;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.jyu.itks545.MyOAuth.AccessToken;
-import org.jyu.itks545.MyOAuth.Authorize;
 import org.jyu.itks545.MyOAuth.RequestToken;
 
-import android.R.bool;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
@@ -57,6 +47,9 @@ import android.widget.TextView;
  */
 public class LoginActivity extends Activity {
 	
+	/**
+	 * Names of the variables which are returned when login-intent returns.
+	 */
 	public static String USERID = "userid";
 	public static String CONSUMERKEY = "consumerkey";
 	public static String CONSUMERSECRET = "consumersecret";
@@ -64,7 +57,6 @@ public class LoginActivity extends Activity {
 	public static String AUTHORIZEDACCESSTOKENSECRET = "authorizedaccesstokensecret";
 	
 	private RequestToken requestToken;
-	private Authorize authorizer;
 	private AccessToken accessToken;
 	
 	/**
@@ -198,8 +190,7 @@ public class LoginActivity extends Activity {
 	}
 
 	public void startRegistration() {
-//		String url = getString(R.string.server) + "register_user";
-		String url = "http://192.168.100.41/itks545/register_user";
+		String url = getString(R.string.server) + getString(R.string.register_user);
 		Intent i = new Intent(Intent.ACTION_VIEW);
 		i.setData(Uri.parse(url));
 		startActivity(i);
@@ -329,46 +320,19 @@ public class LoginActivity extends Activity {
 
 	/**
 	 * Represents an asynchronous login task used to authenticate
-	 * the user in application.
+	 * the user in the application.
 	 */
 	public class UserLoginTask extends AsyncTask<Void, Void, HttpResponse> {	
 		
 		@Override
 		protected HttpResponse doInBackground(Void... params) {
-
-			Log.i("UserLoginTask", "mUsername: " + mUsername + ", mPassword: " + mPassword);
-						
+					
 			List<NameValuePair> data = new ArrayList<NameValuePair>(2);
 	        data.add(new BasicNameValuePair("users_name", mUsername));
 	        data.add(new BasicNameValuePair("users_password", mPassword));
 	        
-			return loginUser(getString(R.string.server) + getString(R.string.login), data);
-		}
-
-		private HttpResponse loginUser(String url, List<NameValuePair> data) {
-			AndroidHttpClient client = AndroidHttpClient.newInstance("Android");
-			HttpPost httpPost = new HttpPost(url);
-			StringEntity entity = null;
-			
-			try {
-	        	if (data != null) {
-	        		entity = new UrlEncodedFormEntity(data);
-	        		httpPost.setEntity(entity);
-	        	}
-	        } catch (UnsupportedEncodingException e) {
-	        	Log.e("UserLoginTask", "HttpUtils : UnsupportedEncodingException : " + e);
-	        }
-			
-			try {
-				return client.execute(httpPost);
-			} catch (IOException e) {
-				e.printStackTrace();
-				return null;
-			} finally {
-				client.close();
-			}
-		}
-		
+			return getResponse(getString(R.string.server) + getString(R.string.login), data);
+		}	
 
 		/**
 		 * Parse login json output to variables.
@@ -376,47 +340,17 @@ public class LoginActivity extends Activity {
 		 * @return
 		 */
 		private boolean parseLoginOutput(String json) {
-			Log.i("UserLoginTask", json);
 			try {
 				JSONObject o = new JSONObject(json);
 				mUserID = o.getInt("user_id");
 				mConsumerKey = o.getString("consumer_key");
 				mConsumerSecret = o.getString("consumer_secret");
 			} catch (JSONException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				return false;
 			}
 			return true;
 		}
-	    
-		/**
-	     * Parse string from httpResponse.
-	     * @param result
-	     * @return
-	     */
-	    private String buildResponseString(HttpResponse result) {
-			StringBuilder sb = new StringBuilder();
-			String line = null;
-
-			try {
-				InputStream inputStream = result.getEntity().getContent();
-				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-				while ((line = reader.readLine()) != null) {
-					sb.append(line);
-				}
-
-				reader.close();
-				inputStream.close();
-			
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-
-	    	return sb.toString();
-	    }
 	    
 		@Override
 		protected void onPostExecute(HttpResponse result) {
@@ -424,24 +358,24 @@ public class LoginActivity extends Activity {
 			showProgress(false);
 			boolean success = false;
 			
-			String responseString= null;
+			String responseString = null;
+
 			try {
 				responseString = buildResponseString(result);
-				Log.i("UserLoginTask", "responseString: " + responseString);
 			} catch (IllegalStateException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			
+			// Parse userID, consumerKey and consumerSecret from response.
 			success = parseLoginOutput(responseString);
 					
 			
 			if (success) {
-				Log.i("UserLoginTask", "success");
+				// Start acquiring access tokens. 
 				mAuthTask = new UserAuthorizationTask();
 				mAuthTask.execute((Void) null);
 			} else {
-				Log.i("UserLoginTask", "failure");
 				mPasswordView
 						.setError(getString(R.string.error_incorrect_password));
 				mPasswordView.requestFocus();
@@ -456,17 +390,17 @@ public class LoginActivity extends Activity {
 	}
 
 	/**
-	 * Represents an asynchronous login/registration task used to authenticate
-	 * the user.
+	 * Acquires OAuth tokens.
 	 */
 	public class UserAuthorizationTask extends AsyncTask<Void, Void, Boolean> {	
 		
 		@Override
 		protected Boolean doInBackground(Void... params) {
 
-			Log.i("UserAuthorizationTask", "mUserID: " + mUserID + ", mConsumerKey: " + mConsumerKey + ", mConsumerSecret: " + mConsumerSecret);
-			
+			// We have individual users consumerKey and consumerSecret at this point. 
+			// Send the request token.
 			requestToken = new RequestToken(mConsumerKey, mConsumerSecret);
+
 			try {
 				requestToken.sendRequest();
 			} catch (Exception e) {
@@ -474,29 +408,36 @@ public class LoginActivity extends Activity {
 				e.printStackTrace();
 			}
 			
-			authorizer = new Authorize(mConsumerKey, mConsumerSecret, requestToken);
-			
+
+			// Get the access token.
 			List<NameValuePair> data = new ArrayList<NameValuePair>(4);
 	        data.add(new BasicNameValuePair("user_id", Integer.toString(mUserID)));
 	        data.add(new BasicNameValuePair(LoginActivity.CONSUMERKEY, mConsumerKey));
 	        data.add(new BasicNameValuePair(LoginActivity.CONSUMERSECRET, mConsumerSecret));
 	        data.add(new BasicNameValuePair("oauth_token", requestToken.getResponseString("oauth_token")));
 	        
-			HttpResponse result = authorizeUser(authorizer.getAuthorizationURL(), data);
+	        
+			HttpResponse result = getResponse(getString(R.string.server) + getString(R.string.authorize), data);
 			
 			String responseString= null;
 			
 			try {
 				responseString = buildResponseString(result);
-				Log.i("UserAuthorizationTask", "responseString: " + responseString);
 			} catch (IllegalStateException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			
-			String pin = parsePinJsonOutput(responseString);
+			String pin = null;
+			try {
+				JSONObject o = new JSONObject(responseString);
+				pin = o.getString("pin");
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+			
 			boolean success = false;
 			
+			// Authorize the access token.
 			if (pin != null) {
 				accessToken = new AccessToken(mConsumerKey, mConsumerSecret, pin, requestToken);
 				try {
@@ -504,7 +445,6 @@ public class LoginActivity extends Activity {
 					mAuthorizedAccessToken = accessToken.getResponseString("oauth_token");
 					mAuthorizedAccessTokenSecret = accessToken.getResponseString("oauth_token_secret");
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				success = true;
@@ -512,87 +452,14 @@ public class LoginActivity extends Activity {
 			return success;
 		}
 
-		private HttpResponse authorizeUser(String url, List<NameValuePair> data) {
-			AndroidHttpClient client = AndroidHttpClient.newInstance("Android");
-			HttpPost httpPost = new HttpPost(url);
-			StringEntity entity = null;
-			
-			try {
-	        	if (data != null) {
-	        		entity = new UrlEncodedFormEntity(data);
-	        		httpPost.setEntity(entity);
-	        	}
-	        } catch (UnsupportedEncodingException e) {
-	        	Log.e("UserAuthorizationTask", "UnsupportedEncodingException : " + e);
-	        }
-			
-			try {
-				return client.execute(httpPost);
-			} catch (IOException e) {
-				e.printStackTrace();
-				return null;
-			} finally {
-				client.close();
-			}
-		}
-		
-		/**
-		 * Parse login json output to variables.
-		 * @param json
-		 * @return
-		 */
-		private String parsePinJsonOutput(String json) {
-			Log.i("UserAuthorizationTask", json);
-			String pin = null;
-			try {
-				JSONObject o = new JSONObject(json);
-				pin = o.getString("pin");
-			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			return pin;
-		}
-	    
-		/**
-	     * Parse string from httpResponse.
-	     * @param result
-	     * @return
-	     */
-	    private String buildResponseString(HttpResponse result) {
-			StringBuilder responseString = new StringBuilder();
-			String line = null;
-
-			try {
-				InputStream inputStream = result.getEntity().getContent();
-				InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-				BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-				while ((line = bufferedReader.readLine()) != null) {
-					responseString.append(line);
-				}
-
-				bufferedReader.close();
-				inputStream.close();
-				inputStreamReader.close();
-			
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-
-	    	return responseString.toString();
-	    }	    
 		@Override
 		protected void onPostExecute(Boolean success) {
 			mAuthTask = null;
 			showProgress(false);
 						
 			if (success) {
-				Log.i("UserAuthorizationTask", "success");
 				finish();
 			} else {
-				Log.i("UserAuthorizationTask", "failure");
 				mPasswordView
 						.setError(getString(R.string.error_incorrect_password));
 				mPasswordView.requestFocus();
@@ -603,6 +470,65 @@ public class LoginActivity extends Activity {
 		protected void onCancelled() {
 			mAuthTask = null;
 			showProgress(false);
+		}
+	}
+	
+	/**
+     * Parse string from httpResponse.
+     * @param result
+     * @return httpResponse as a string
+     */
+    private String buildResponseString(HttpResponse result) {
+		StringBuilder responseString = new StringBuilder();
+		String line = null;
+
+		try {
+			InputStream inputStream = result.getEntity().getContent();
+			InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+			BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+			while ((line = bufferedReader.readLine()) != null) {
+				responseString.append(line);
+			}
+
+			bufferedReader.close();
+			inputStream.close();
+			inputStreamReader.close();
+		
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+    	return responseString.toString();
+    }	
+    
+    /**
+     * Get response from url.
+     * @param url 
+     * @param data
+     * @return
+     */
+    private HttpResponse getResponse(String url, List<NameValuePair> data) {
+		AndroidHttpClient client = AndroidHttpClient.newInstance("Android");
+		HttpPost httpPost = new HttpPost(url);
+		StringEntity entity = null;
+		
+		try {
+        	if (data != null) {
+        		entity = new UrlEncodedFormEntity(data);
+        		httpPost.setEntity(entity);
+        	}
+        } catch (UnsupportedEncodingException e) {
+        	Log.e("getResponse", "UnsupportedEncodingException : " + e);
+        }
+		
+		try {
+			return client.execute(httpPost);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
+		} finally {
+			client.close();
 		}
 	}
 }
