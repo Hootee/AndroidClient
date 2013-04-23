@@ -191,6 +191,13 @@ public class MyMapActivity extends FragmentActivity {
 				}
  			}
 			break;
+		case id.action_refresh_map:
+			FragmentManager fragmentManager1 = getSupportFragmentManager();
+			MyMapFragment myMapFragment1 = (MyMapFragment) fragmentManager1.findFragmentByTag("MapFrag");
+			if (myMapFragment1 != null) {
+				myMapFragment1.getAllMarkers();
+			}
+			break;
 		default:
 			return super.onOptionsItemSelected(item);
 		}

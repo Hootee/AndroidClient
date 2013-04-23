@@ -83,6 +83,7 @@ public class MyMapFragment extends SupportMapFragment implements AsyncCallback, 
 	private void showMarkers(String json) {
 		Log.i(TAG, json);
 		mMap.clear();
+		currentMarker = null;
 		try {
 			JSONObject jObj = new JSONObject(json);
 			JSONArray jArray = new JSONArray();

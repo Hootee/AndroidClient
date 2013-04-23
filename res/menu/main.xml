@@ -11,5 +11,11 @@
         android:showAsAction="never"
         android:title="@string/delete_message"
         android:visible="true"/>
+    <item
+        android:id="@+id/action_refresh_map"
+        android:orderInCategory="100"
+        android:showAsAction="never"
+        android:title="@string/refresh_map"
+        android:visible="true"/>
     
 </menu>
