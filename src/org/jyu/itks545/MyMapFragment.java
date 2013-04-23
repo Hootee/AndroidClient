@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.GoogleMap.OnMapClickListener;
 import com.google.android.gms.maps.GoogleMap.OnMarkerClickListener;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.UiSettings;
@@ -19,7 +20,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-public class MyMapFragment extends SupportMapFragment implements AsyncCallback, OnMarkerClickListener {
+public class MyMapFragment extends SupportMapFragment implements AsyncCallback, OnMarkerClickListener, OnMapClickListener{
 	private static final String TAG = MyMapFragment.class.getSimpleName();
 	
 	/**
@@ -27,6 +28,7 @@ public class MyMapFragment extends SupportMapFragment implements AsyncCallback, 
 	 * available.
 	 */
 	private GoogleMap mMap;
+	private Marker currentMarker;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -47,6 +49,7 @@ public class MyMapFragment extends SupportMapFragment implements AsyncCallback, 
 
 		mMap = getMap();
 		mMap.setOnMarkerClickListener(this);
+		mMap.setOnMapClickListener(this);
 		initMap();
 		getAllMarkers();
 	}
@@ -69,16 +72,17 @@ public class MyMapFragment extends SupportMapFragment implements AsyncCallback, 
 	/*
 	 * Get all the markers.
 	 */
-	private void getAllMarkers() {
+	public void getAllMarkers() {
 		new GetJsonASync(this, getString(R.string.server) + getString(R.string.getallmessages), null).execute();
 	}
 
 	/*
-	 * Show markers on map.
+	 * Clears map and then show markers on the map.
 	 * Its called from GetJsonASync() as a callback when acquiring the markers.
 	 */
 	private void showMarkers(String json) {
 		Log.i(TAG, json);
+		mMap.clear();
 		try {
 			JSONObject jObj = new JSONObject(json);
 			JSONArray jArray = new JSONArray();
@@ -118,6 +122,19 @@ public class MyMapFragment extends SupportMapFragment implements AsyncCallback, 
 	@Override
 	public boolean onMarkerClick(Marker marker) {
 		Log.i(TAG, "Clicked: " + marker.getSnippet());
+		currentMarker = marker;
+		
 		return false;
 	}
+
+	@Override
+	public void onMapClick(LatLng arg0) {
+		Log.i(TAG, "Map clicked");
+		currentMarker = null;		
+	}
+	
+	public Marker getCurrentMarker() {
+		return currentMarker;
+	}
+	
 }

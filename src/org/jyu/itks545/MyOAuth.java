@@ -16,6 +16,7 @@ public class MyOAuth {
 	private static final String REQUEST_TOKEN_PATH = API_URL + "/request_token";
 	private static final String ACCESS_TOKEN_PATH = API_URL + "/access_token";
 	private static final String ADD_MESSAGE_PATH = API_URL + "/messages/add";
+	private static final String DELETE_MESSAGE_PATH = API_URL + "/messages/delete";
 
 	public static class RequestToken extends OAuthGetRequest {
 
@@ -37,6 +38,14 @@ public class MyOAuth {
 	public static class AddMessage extends OAuthGetRequest {
 		public AddMessage(int userID, double latitude, double longitude, String message, String consumerKey, String consumerSecret, String accessToken, String accessTokenSecret) {
 			super(consumerKey, consumerSecret, ADD_MESSAGE_PATH + "/" + userID + "/" + latitude + "/" + longitude + "/" + message);
+			super.putValue(ParameterKey.oauth_token, accessToken);
+            super.putValue(ParameterKey.oauth_token_secret, accessTokenSecret);
+		}
+	}
+
+	public static class DeleteMessage extends OAuthGetRequest {
+		public DeleteMessage(int messageID, String consumerKey, String consumerSecret, String accessToken, String accessTokenSecret) {
+			super(consumerKey, consumerSecret, DELETE_MESSAGE_PATH + "/" + messageID);
 			super.putValue(ParameterKey.oauth_token, accessToken);
             super.putValue(ParameterKey.oauth_token_secret, accessTokenSecret);
 		}

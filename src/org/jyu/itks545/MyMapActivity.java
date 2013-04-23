@@ -1,5 +1,8 @@
 package org.jyu.itks545;
 
+import java.io.UnsupportedEncodingException;
+
+import org.jyu.itks545.MyOAuth.DeleteMessage;
 import org.jyu.itks545.R.id;
 
 import android.app.AlertDialog;
@@ -10,6 +13,7 @@ import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -21,6 +25,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 
 public class MyMapActivity extends FragmentActivity {
 	private static final String TAG = MyMapActivity.class.getSimpleName();
@@ -175,7 +180,17 @@ public class MyMapActivity extends FragmentActivity {
 				startActivityForResult(intent, LOGIN_REQUEST_CODE);				
 			}
 			break;
-
+		case id.action_delete_message:
+			FragmentManager fragmentManager = getSupportFragmentManager();
+			MyMapFragment myMapFragment = (MyMapFragment) fragmentManager.findFragmentByTag("MapFrag");
+			if (myMapFragment != null) {
+				Marker marker = myMapFragment.getCurrentMarker();
+				if (marker != null) {
+					int messageID = Integer.parseInt(marker.getTitle());
+					new DeleteMessageASync().execute(messageID);
+				}
+ 			}
+			break;
 		default:
 			return super.onOptionsItemSelected(item);
 		}
@@ -263,4 +278,37 @@ public class MyMapActivity extends FragmentActivity {
 		alert.show();
 	}
 	
+	/**
+	 * This deletes message from the server on the background.
+	 * @author tonsal
+	 *
+	 */
+	private class DeleteMessageASync extends AsyncTask<Integer, Void, Void> {
+
+		@Override
+		protected Void doInBackground(Integer... params) {
+			try {
+				int messageID = params[0];
+				DeleteMessage deleteMessage = new DeleteMessage(
+						messageID,
+						mConsumerKey, 
+						mConsumerSecret, 
+						mAuthorizedAccessToken, 
+						mAuthorizedAccessTokenSecret);
+
+				deleteMessage.sendRequest();
+				FragmentManager fragmentManager = getSupportFragmentManager();
+				MyMapFragment myMapFragment = (MyMapFragment) fragmentManager.findFragmentByTag("MapFrag");
+				if (myMapFragment != null) {
+					myMapFragment.getAllMarkers();
+				}
+			} catch (UnsupportedEncodingException e1) {
+				e1.printStackTrace();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			return null;
+		}
+	}
 }
+

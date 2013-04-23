@@ -3,6 +3,7 @@
 
     <string name="app_name">itks545</string>
     <string name="add_message">Add message</string>
+    <string name="delete_message">Delete message</string>
     <string name="hello_world">Hello world!</string>
     <string name="cancel">Cancel</string>
     <string name="enable_GPS">Location provider is disabled in your device. Would you like to enable it?</string>
