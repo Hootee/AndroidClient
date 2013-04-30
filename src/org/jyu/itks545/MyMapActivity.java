@@ -198,6 +198,10 @@ public class MyMapActivity extends FragmentActivity {
 				myMapFragment1.getAllMarkers();
 			}
 			break;
+		case id.action_about:
+			Intent intent = new Intent(this, About.class);
+			startActivity(intent);
+			break;
 		default:
 			return super.onOptionsItemSelected(item);
 		}
